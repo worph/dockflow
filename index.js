@@ -19,6 +19,7 @@ if(!dockerImage){
 // Function to execute shell commands
 function runCommand(command) {
   try {
+    console.log(`CMD : ${command}`)
     execSync(command, { stdio: 'inherit' });
   } catch (error) {
     console.error(`Execution failed: ${error}`);
@@ -33,7 +34,8 @@ const action = process.argv[2];
 
 switch (action) {
   case 'build':
-    runCommand(`docker build -t ${dockerImage} .`);
+    const additionalArgs = process.argv.slice(3).join(' '); // Join additional arguments
+    runCommand(`docker build ${additionalArgs} -t ${dockerImage} -t ${dockerImage}:${version} -t ${dockerImage}:latest .`);
     break;
 
   case 'publish':
@@ -45,12 +47,15 @@ switch (action) {
     if(process.argv.length > 3) {
       version = process.argv[3] || version;
     }
+    
+    // Building and tagging for both version and latest
+    runCommand(`docker login`);//login is executed first because it may ask for cred (but is used only for publish phase)
+    runCommand(`docker build -t ${dockerImage}:${version} -t ${dockerImage}:latest -t ${registry}/${dockerImage}:${version} -t ${registry}/${dockerImage}:latest .`);
 
-    runCommand(`docker build -t ${dockerImage}:${version} .`);
-    runCommand(`docker login`);
-    runCommand(`docker tag ${dockerImage}:${version} ${registry}/${dockerImage}:${version}`);
+    // Pushing both tags
     runCommand(`docker push ${registry}/${dockerImage}:${version}`);
-    console.log(`Published ${registry}/${dockerImage}:${version}`);
+    runCommand(`docker push ${registry}/${dockerImage}:latest`);
+    console.log(`Published ${registry}/${dockerImage}:${version} and latest`);
     break;
 
   default:
