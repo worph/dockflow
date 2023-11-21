@@ -16,6 +16,23 @@ if(!dockerImage){
   process.exit(1);
 }
 
+// Function to get version from a file
+function getVersionFromFile(filePath) {
+  if (fs.existsSync(filePath)) {
+    const fileContent = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return fileContent.version;
+  } else {
+    console.error(`Error: Specified version file ${filePath} does not exist.`);
+    process.exit(1);
+  }
+}
+
+// Check if version starts with 'file:' and extract version from the specified file
+if (version.startsWith('file:')) {
+  const filePath = version.substring(5);
+  version = getVersionFromFile(filePath);
+}
+
 // Function to execute shell commands
 function runCommand(command) {
   try {
