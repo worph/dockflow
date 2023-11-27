@@ -7,13 +7,25 @@ const { execSync } = require('child_process');
 const dockerConfig = fs.existsSync('dockflow.json') ? JSON.parse(fs.readFileSync('dockflow.json', 'utf8')) : {};
 const packageJson = fs.existsSync('package.json') ? JSON.parse(fs.readFileSync('package.json', 'utf8')) : {};
 
-const dockerImage = dockerConfig.image || packageJson.name;
+let dockerImage = dockerConfig.image || packageJson.name;
 const registry = dockerConfig.registry;//if the registry is not specified, it will be published on the public docker hub
 let version = dockerConfig.version || packageJson.version || 'latest';
 
 if(!dockerImage){
   console.error('Error: Image name must be specified in docker.json or package.json.');
   process.exit(1);
+}
+
+// Sanitize dockerImage name
+dockerImage = sanitizeDockerImageName(dockerImage);
+
+// Function to sanitize Docker image name
+function sanitizeDockerImageName(imageName) {
+  return imageName
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '-')
+    .replace(/^-+/, '') // Remove leading hyphens
+    .replace(/-+/g, '-'); // Replace multiple sequential hyphens with a single one
 }
 
 // Function to get version from a file
