@@ -2,17 +2,19 @@
 
 const fs = require('fs');
 const { execSync } = require('child_process');
+const yargs = require('yargs/yargs');
+const { hideBin } = require('yargs/helpers');
 
 // Read configurations
 const dockerConfig = fs.existsSync('dockflow.json') ? JSON.parse(fs.readFileSync('dockflow.json', 'utf8')) : {};
 const packageJson = fs.existsSync('package.json') ? JSON.parse(fs.readFileSync('package.json', 'utf8')) : {};
 
 let dockerImage = dockerConfig.image || packageJson.name;
-const registry = dockerConfig.registry;//if the registry is not specified, it will be published on the public docker hub
+const registry = dockerConfig.registry;
 let version = dockerConfig.version || packageJson.version || 'latest';
 
-if(!dockerImage){
-  console.error('Error: Image name must be specified in docker.json or package.json.');
+if (!dockerImage) {
+  console.error('Error: Image name must be specified in dockflow.json or package.json.');
   process.exit(1);
 }
 
@@ -26,6 +28,16 @@ function sanitizeDockerImageName(imageName) {
     .replace(/[^a-z0-9._-]/g, '-')
     .replace(/^-+/, '') // Remove leading hyphens
     .replace(/-+/g, '-'); // Replace multiple sequential hyphens with a single one
+}
+
+// Function to check if Docker image version exists in the registry
+function checkDockerImageVersionExists(image, version, registry) {
+  try {
+    execSync(`docker manifest inspect ${registry}/${image}:${version}`, { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Function to get version from a file
@@ -56,32 +68,51 @@ function runCommand(command) {
   }
 }
 
-console.log("Executing dockflow in :"+process.cwd());
+// Parse command line arguments using yargs
+const argv = yargs(hideBin(process.argv))
+  .version(false) // Disable yargs' built-in version functionality
+  .command('build', 'Build the docker image')
+  .command('publish', 'Publish the docker image', {
+    force: {
+      description: 'Force the action even if the version exists',
+      type: 'boolean',
+      default: false
+    },
+    version: {
+      description: 'Specify the version to publish',
+      type: 'string'
+    }
+  })
+  .demandCommand(1, 'You need at least one command before moving on')
+  .help()
+  .argv;
+
+console.log("Executing dockflow in :" + process.cwd());
 
 // Determine action based on command-line argument
-const action = process.argv[2];
-
-switch (action) {
+switch (argv._[0]) {
   case 'build':
-    const additionalArgs = process.argv.slice(3).join(' '); // Join additional arguments
+    const additionalArgs = argv._.slice(1).join(' '); // Join additional arguments
     runCommand(`docker build ${additionalArgs} -t ${dockerImage} -t ${dockerImage}:${version} -t ${dockerImage}:latest .`);
     break;
 
   case 'publish':
     if (!registry) {
-      console.error('Error: Registry must be specified in docker.json for the publish task.');
+      console.error('Error: Registry must be specified in dockflow.json for the publish task.');
       process.exit(1);
     }
 
-    if(process.argv.length > 3) {
-      version = process.argv[3] || version;
+    if (argv.version) {
+      version = argv.version;
     }
-    
-    // Building and tagging for both version and latest
-    runCommand(`docker login`);//login is executed first because it may ask for cred (but is used only for publish phase)
-    runCommand(`docker build -t ${dockerImage}:${version} -t ${dockerImage}:latest -t ${registry}/${dockerImage}:${version} -t ${registry}/${dockerImage}:latest .`);
 
-    // Pushing both tags
+    if (!argv.force && checkDockerImageVersionExists(dockerImage, version, registry)) {
+      console.error(`Error: Version ${version} of ${dockerImage} already exists in ${registry}. Use --force to override.`);
+      process.exit(1);
+    }
+
+    runCommand(`docker login`);
+    runCommand(`docker build -t ${dockerImage}:${version} -t ${dockerImage}:latest -t ${registry}/${dockerImage}:${version} -t ${registry}/${dockerImage}:latest .`);
     runCommand(`docker push ${registry}/${dockerImage}:${version}`);
     runCommand(`docker push ${registry}/${dockerImage}:latest`);
     console.log(`Published ${registry}/${dockerImage}:${version} and latest`);

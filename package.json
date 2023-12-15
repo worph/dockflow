@@ -1,6 +1,6 @@
 {
   "name": "dockflow",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "DockFlow is a Node.js script that streamlines Docker image operations, such as building, caching, and publishing. It's designed to simplify Docker image management, making it an invaluable tool for developers and DevOps engineers. DockFlow centralizes all necessary information for Docker image publication in a single `docker.json` file, with the option to use details directly from `package.json`.",
   "main": "index.js",
   "bin": {
@@ -21,5 +21,8 @@
   "bugs": {
     "url": "https://github.com/worph/dockflow/issues"
   },
-  "homepage": "https://github.com/worph/dockflow#readme"
+  "homepage": "https://github.com/worph/dockflow#readme",
+  "dependencies": {
+    "yargs": "^17.7.2"
+  }
 }
