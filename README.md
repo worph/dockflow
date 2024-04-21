@@ -23,7 +23,8 @@ Ensure your docker.json file is properly configured. If certain parameters are n
 {
   "image": "<optional: defaults to package.json name>",
   "registry": "<optional> will publish the image on the public docker hub if not specified",
-  "version": "<optional: defaults to package.json version>"
+  "version": "<optional: defaults to package.json version>",
+  "dockerfile": "<optional: defaults to 'Dockerfile'>"
 }
 ```
 
