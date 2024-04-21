@@ -94,7 +94,7 @@ console.log("Executing dockflow in :" + process.cwd());
 switch (argv._[0]) {
     case 'build':
         const additionalArgs = argv._.slice(1).join(' '); // Join additional arguments
-        runCommand(`docker build -f ${dockerfile} ${additionalArgs} -t ${dockerImage} -t ${dockerImage}:${version} -t ${dockerImage}:latest .`);
+        runCommand(`docker build -f ${dockerfile} ${additionalArgs} --build-arg BUILD_VERSION=${version} -t ${dockerImage} -t ${dockerImage}:${version} -t ${dockerImage}:latest .`);
         break;
 
     case 'publish':
@@ -113,7 +113,7 @@ switch (argv._[0]) {
         }
 
         runCommand(`docker login`);
-        runCommand(`docker build -f ${dockerfile} -t ${dockerImage}:${version} -t ${dockerImage}:latest -t ${registry}/${dockerImage}:${version} -t ${registry}/${dockerImage}:latest .`);
+        runCommand(`docker build -f ${dockerfile} --build-arg BUILD_VERSION=${version} -t ${dockerImage}:${version} -t ${dockerImage}:latest -t ${registry}/${dockerImage}:${version} -t ${registry}/${dockerImage}:latest .`);
         runCommand(`docker push ${registry}/${dockerImage}:${version}`);
         runCommand(`docker push ${registry}/${dockerImage}:latest`);
         console.log(`Published ${registry}/${dockerImage}:${version} and latest`);
