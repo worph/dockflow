@@ -1,13 +1,48 @@
 #!/usr/bin/env node
-console.log('Dockflow v1.0.7');
+
 const fs = require('fs');
-const {execSync} = require('child_process');
+const { execSync } = require('child_process');
 const yargs = require('yargs/yargs');
-const {hideBin} = require('yargs/helpers');
+const { hideBin } = require('yargs/helpers');
+
+console.log('Dockflow v1.0.8');
+
+// Function to read JSON file
+function readJsonFile(filePath) {
+    if (fs.existsSync(filePath)) {
+        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    }
+    return {};
+}
+
+// Parse command line arguments using yargs
+const argv = yargs(hideBin(process.argv))
+    .version(false) // Disable yargs' built-in version functionality
+    .option('config', {
+        alias: 'c',
+        type: 'string',
+        description: 'Specify path to dockflow.json file',
+        default: 'dockflow.json'
+    })
+    .command('build', 'Build the docker image')
+    .command('publish', 'Publish the docker image', {
+        force: {
+            description: 'Force the action even if the version exists',
+            type: 'boolean',
+            default: false
+        },
+        version: {
+            description: 'Specify the version to publish',
+            type: 'string'
+        }
+    })
+    .demandCommand(1, 'You need at least one command before moving on')
+    .help()
+    .argv;
 
 // Read configurations
-const dockerConfig = fs.existsSync('dockflow.json') ? JSON.parse(fs.readFileSync('dockflow.json', 'utf8')) : {};
-const packageJson = fs.existsSync('package.json') ? JSON.parse(fs.readFileSync('package.json', 'utf8')) : {};
+const dockerConfig = readJsonFile(argv.config);
+const packageJson = readJsonFile('package.json');
 
 let dockerImage = dockerConfig.image || packageJson.name;
 const registry = dockerConfig.registry;
@@ -61,7 +96,7 @@ if (version.startsWith('file:')) {
 // Function to execute shell commands
 function runCommand(command) {
     try {
-        console.log(`CMD : ${command}`)
+        console.log(`CMD : ${command}`);
         execSync(command, {stdio: 'inherit'});
     } catch (error) {
         console.error(`Execution failed: ${error}`);
@@ -69,26 +104,7 @@ function runCommand(command) {
     }
 }
 
-// Parse command line arguments using yargs
-const argv = yargs(hideBin(process.argv))
-    .version(false) // Disable yargs' built-in version functionality
-    .command('build', 'Build the docker image')
-    .command('publish', 'Publish the docker image', {
-        force: {
-            description: 'Force the action even if the version exists',
-            type: 'boolean',
-            default: false
-        },
-        version: {
-            description: 'Specify the version to publish',
-            type: 'string'
-        }
-    })
-    .demandCommand(1, 'You need at least one command before moving on')
-    .help()
-    .argv;
-
-console.log("Executing dockflow in :" + process.cwd());
+console.log("Executing dockflow in: " + process.cwd());
 
 // Determine action based on command-line argument
 switch (argv._[0]) {
